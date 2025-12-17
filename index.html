@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master IA - Dark Mode</title>
+    <style>
+        :root {
+            /* Palette Dark Mode */
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary-color: #90caf9; /* Bleu clair lisible sur fond noir */
+            --accent-color: #2196f3;
+            --text-color: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --success: #66bb6a; /* Vert doux */
+            --error: #ef5350;   /* Rouge doux */
+            --btn-bg: #2c2c2c;
+            --btn-hover: #3d3d3d;
+            --border-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 { 
+            color: var(--primary-color); 
+            font-weight: 300; 
+            margin-bottom: 10px; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .score-board {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--bg-color);
+            font-size: 1.2rem;
+            background: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 50px;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .question-title {
+            font-size: 1.3rem;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--accent-color);
+            padding-left: 20px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .options-grid {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .option-btn {
+            background: var(--btn-bg);
+            border: 1px solid var(--border-color);
+            padding: 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 1rem;
+            color: var(--text-color);
+            transition: all 0.2s ease;
+            width: 100%;
+            position: relative;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            background-color: var(--btn-hover);
+            transform: translateY(-2px);
+        }
+
+        .option-btn.correct {
+            background-color: rgba(102, 187, 106, 0.2) !important;
+            border-color: var(--success) !important;
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .option-btn.wrong {
+            background-color: rgba(239, 83, 80, 0.2) !important;
+            border-color: var(--error) !important;
+            color: var(--error);
+            opacity: 0.7;
+        }
+
+        .justification {
+            background: #252525;
+            padding: 20px;
+            border-radius: 10px;
+            border-top: 3px solid var(--primary-color);
+            margin-top: 25px;
+            display: none;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .justification strong { color: white; }
+
+        .nav-btn {
+            background: var(--primary-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-top: 25px;
+            width: 100%;
+            font-weight: bold;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        .nav-btn:hover { 
+            background: var(--accent-color); 
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulateur CCTL IA MEOW</h1>
+        <h2>merci de skip quand y'a des questions débiles</h2>
+        <div class="score-board" id="score">Score : 0 / 0</div>
+    </header>
+
+    <div id="quiz-container"></div>
+    <button class="nav-btn" id="next-btn" style="display:none;" onclick="chargerProchaineQuestion()">Question Suivante</button>
+</div>
+
+<script>
+    // BASE DE DONNÉES NETTOYÉE
+const database = [
+        // --- 1. MÉTRIQUES & MATHS (INTERPRÉTATION AVANCÉE) ---
+        { q: "Si la MSE d'un modèle est de 100 k€², quelle est l'erreur moyenne en unité standard ?", r: ["10 k€", "100 k€", "50 k€"], c: 0, j: "La MSE est au carré (100). Pour retrouver l'unité standard (l'erreur réelle moyenne), il faut prendre la racine carrée (RMSE). √100 = 10." },
+        { q: "Pourquoi la MAE est-elle mathématiquement plus robuste aux outliers que la MSE ?", r: ["Elle n'élève pas les résidus au carré", "Elle utilise la racine carrée", "Elle divise par N-1"], c: 0, j: "La mise au carré dans la MSE (e²) fait exploser la valeur d'une grande erreur (ex: 10²=100), donnant un poids disproportionné aux outliers. La MAE (|e|) reste linéaire." },
+        { q: "Dans la formule de la régression Y = Xβ + ε, que représente ε (epsilon) ?", r: ["Le terme d'erreur irréductible (bruit)", "La pente de la droite", "L'ordonnée à l'origine"], c: 0, j: "ε représente le terme d'erreur ou le 'bruit' du modèle, c'est-à-dire la partie de Y que les variables X ne peuvent pas expliquer." },
+        { q: "Si le coefficient de corrélation de Pearson entre X et Y est de 0, cela signifie :", r: ["Aucune relation linéaire", "Indépendance totale", "Relation non-linéaire forte"], c: 0, j: "Un coefficient de 0 indique l'absence de relation *linéaire*. Il peut cependant y avoir une relation non-linéaire parfaite (ex: Y = X² sur [-1, 1] a une corrélation de 0)." },
+        { q: "Quelle métrique sanctionne le plus un modèle qui fait une seule très grosse erreur de prédiction ?", r: ["MSE", "MAE", "R²"], c: 0, j: "À cause du terme quadratique (carré), la MSE sera beaucoup plus impactée par une erreur unique de 1000 (1000² = 1 000 000) que la MAE (1000)." },
+        { q: "Si votre modèle a un R² négatif sur le jeu de test, cela signifie :", r: ["Le modèle est pire qu'une prédiction moyenne simple", "Il y a une erreur de calcul", "C'est impossible"], c: 0, j: "Le R² compare votre modèle à un modèle naïf qui prédit toujours la moyenne. S'il est négatif, votre modèle est moins performant que la simple moyenne." },
+        { q: "Calcul mental : Si yi = [2, 4] et ŷ = [2, 2], quelle est la MSE ?", r: ["2", "1", "4"], c: 0, j: "Erreurs : (2-2)=0 et (4-2)=2. Carrés : 0 et 4. Moyenne des carrés : (0+4)/2 = 2." },
+        { q: "Dans une régression multiple, comment interpréter un coefficient β = 0.5 pour la variable X1 ?", r: ["Si X1 augmente de 1, Y augmente de 0.5 (toutes choses égales par ailleurs)", "Si X1 augmente de 1, Y augmente de 0.5% ", "C'est la corrélation entre X1 et Y"], c: 0, j: "C'est l'effet marginal : variation absolue de Y pour une variation unitaire de X1, en supposant les autres variables constantes (ceteris paribus)." },
+        { q: "Si la covariance entre X et Y est positive, alors :", r: ["La corrélation est positive", "La corrélation est négative", "On ne peut pas savoir"], c: 0, j: "La corrélation est la covariance normalisée par les écart-types. Comme les écart-types sont positifs, le signe de la corrélation est le même que celui de la covariance." },
+        { q: "L'optimisation OLS (Ordinary Least Squares) minimise :", r: ["La somme des carrés des résidus verticaux", "La distance perpendiculaire aux points", "La somme des valeurs absolues"], c: 0, j: "La régression linéaire standard minimise la distance *verticale* (selon l'axe Y) entre le point et la droite, au carré." },
+
+        // --- 2. PYTHON & PANDAS (CODE & SYNTAXE) ---
+        { q: "Quelle méthode Pandas permet de fusionner deux DataFrames sur une clé commune (type SQL JOIN) ?", r: ["pd.merge()", "pd.concat()", "pd.join_tables()"], c: 0, j: "`pd.merge()` est la fonction dédiée aux jointures (inner, left, right, outer) basées sur des colonnes clés." },
+        { q: "Que renvoie `df.iloc[0:3, 1]` ?", r: ["Les lignes 0, 1, 2 de la colonne index 1", "Les lignes 0 à 3 de la colonne index 1", "La ligne 1 des colonnes 0 à 3"], c: 0, j: "En Python, la borne supérieure du slice est exclue. `0:3` prend les indices 0, 1 et 2." },
+        { q: "Pour encoder une variable catégorielle ordinale (ex: Low, Medium, High), on utilise :", r: ["Label Encoding / Ordinal Encoding", "One-Hot Encoding", "Frequency Encoding"], c: 0, j: "Comme il y a un ordre logique, on préfère transformer en entiers (0, 1, 2) pour conserver cette hiérarchie, plutôt que de créer des colonnes binaires (One-Hot)." },
+        { q: "Quelle fonction Scikit-learn sépare les données en jeux d'entraînement et de test ?", r: ["train_test_split", "split_data", "validation_split"], c: 0, j: "`from sklearn.model_selection import train_test_split` est la fonction standard." },
+        { q: "Après `model.fit(X, y)`, où sont stockés les coefficients de la régression ?", r: ["model.coef_", "model.params", "model.weights"], c: 0, j: "Scikit-learn stocke les attributs appris avec un underscore à la fin, donc `coef_` et `intercept_`." },
+        { q: "Si vous avez des NaN dans une colonne numérique importante, quelle imputation est la plus robuste aux outliers ?", r: ["La médiane", "La moyenne", "Le mode"], c: 0, j: "La médiane n'est pas influencée par les valeurs extrêmes, contrairement à la moyenne qui peut être biaisée par un seul outlier." },
+        { q: "Que fait `df.apply(lambda x: x**2)` sur un DataFrame ?", r: ["Applique la fonction à chaque élément (ou colonne/ligne)", "Renvoie une erreur", "Ne fait rien sans inplace=True"], c: 0, j: "`apply` vectorise l'opération. Par défaut sur les colonnes (axis=0), mais sur une Series, elle s'applique élément par élément." },
+        { q: "Quelle erreur obtiendrez-vous si vous passez des chaînes de caractères brutes à `LinearRegression().fit()` ?", r: ["ValueError (could not convert string to float)", "TypeError", "Ça fonctionne automatiquement"], c: 0, j: "Scikit-learn ne gère pas le texte brut. Il faut impérativement encoder les variables catégorielles en nombres avant." },
+        { q: "Quelle commande permet de voir la corrélation entre toutes les paires de variables ?", r: ["df.corr()", "df.correlation()", "df.cov()"], c: 0, j: "`df.corr()` calcule la matrice de corrélation de Pearson par défaut." },
+        { q: "Comment supprimer la colonne 'id' sans créer un nouveau DataFrame ?", r: ["df.drop('id', axis=1, inplace=True)", "df.remove('id')", "del df['id']"], c: 0, j: "L'argument `inplace=True` modifie l'objet existant. `axis=1` spécifie qu'on agit sur les colonnes." },
+
+        // --- 3. CONCEPTS ML AVANCÉS & DATA ---
+        { q: "Qu'est-ce que la multicolinéarité dans une régression linéaire multiple ?", r: ["Une forte corrélation entre les variables explicatives (X)", "Une forte corrélation entre X et Y", "Une variance nulle de Y"], c: 0, j: "C'est quand les variables d'entrée sont corrélées entre elles. Cela rend l'estimation des coefficients instable (variance élevée des coefficients)." },
+        { q: "Le 'Data Leakage' (fuite de données) se produit quand :", r: ["Des infos du futur/test se retrouvent dans le train", "On perd des données", "Le modèle est trop lent"], c: 0, j: "C'est l'utilisation d'informations lors de l'entraînement qui ne seront pas disponibles lors de la prédiction réelle, faussant les résultats (score artificiellement haut)." },
+        { q: "Pourquoi normaliser (StandardScaler) les données avant une régression régularisée ?", r: ["Pour que toutes les variables aient le même poids initial", "Pour corriger les valeurs manquantes", "C'est inutile"], c: 0, j: "Les pénalités (L1/L2) sont sensibles à l'échelle. Sans normalisation, une variable avec de grandes valeurs sera plus pénalisée indûment." },
+        { q: "Si votre modèle apprend le bruit des données d'entraînement au lieu de la tendance, il fait du :", r: ["Overfitting (Sur-apprentissage)", "Underfitting", "Clustering"], c: 0, j: "L'overfitting correspond à un modèle qui colle trop aux données d'entraînement (y compris le bruit) et échoue à généraliser sur de nouvelles données." },
+        { q: "Dans le compromis Biais-Variance, un modèle très simple (ex: moyenne) a :", r: ["Un fort biais et une faible variance", "Un faible biais et une forte variance", "Les deux faibles"], c: 0, j: "Il est trop rigide (fort biais, il rate la cible) mais très stable (faible variance, il change peu si on change les données)." },
+        { q: "Quelle technique permet de valider la performance du modèle sur plusieurs sous-ensembles de données ?", r: ["Cross-Validation (Validation Croisée)", "Grid Search", "Imputation"], c: 0, j: "La Cross-Validation (ex: k-fold) divise les données en k parties pour entraîner et tester k fois, donnant une estimation plus robuste de la performance." },
+        { q: "Une variable avec une variance nulle (valeur unique pour toutes les lignes) :", r: ["N'apporte aucune information prédictive", "Est très importante", "Doit être normalisée"], c: 0, j: "Si une variable ne varie pas, elle ne peut pas expliquer les variations de la cible Y. Elle doit être supprimée." },
+        { q: "Le 'One-Hot Encoding' d'une variable à 50 catégories pose quel problème ?", r: ["Augmentation massive de la dimensionnalité", "Perte d'information", "Biais négatif"], c: 0, j: "Cela crée 50 nouvelles colonnes. Sur un petit dataset, cela peut causer le fléau de la dimension (Curse of Dimensionality)." },
+        { q: "Si vous entraînez et testez sur les mêmes données, votre métrique d'erreur sera :", r: ["Optimiste et biaisée", "Réaliste", "Pessimiste"], c: 0, j: "Le modèle a déjà vu les réponses. L'erreur sera très faible, mais ne reflétera pas la capacité du modèle à généraliser (Overfitting)." },
+        { q: "Dans Y = 50 - 2X, si on change l'unité de X de mètres en kilomètres, que devient la pente ?", r: ["Elle est multipliée par 1000 (-2000)", "Elle est divisée par 1000", "Elle ne change pas"], c: 0, j: "Si X devient 1000 fois plus petit (km), pour garder le même Y, le coefficient doit être 1000 fois plus grand pour compenser." },
+
+        // --- 4. ÉTHIQUE FORMELLE & DÉFINITIONS ---
+        { q: "Le principe de 'Non-malfaisance' (Non-maleficence) signifie :", r: ["Ne pas causer de tort intentionnellement", "Faire le bien activement", "Respecter la liberté de l'utilisateur"], c: 0, j: "C'est l'obligation de ne pas infliger de dommages ('Primum non nocere'). Distingué de la bienfaisance qui demande d'agir positivement." },
+        { q: "La 'Bienfaisance' (Beneficence) en IA impose :", r: ["D'agir dans l'intérêt positif de l'utilisateur", "De ne rien faire", "D'être neutre"], c: 0, j: "C'est l'obligation morale d'agir pour le bénéfice d'autrui, au-delà de la simple non-nuisance." },
+        { q: "L'Autonomie (principe éthique) concerne :", r: ["La capacité des humains à contrôler l'IA et faire leurs propres choix", "L'autonomie de la batterie", "L'IA qui agit seule"], c: 0, j: "En éthique, l'autonomie réfère au respect de la capacité de décision des humains, qui ne doivent pas être manipulés ou contraints par l'algorithme." },
+        { q: "La 'Justice' (principe éthique) vise à :", r: ["Une répartition équitable des bénéfices et des risques", "Punir les erreurs", "Optimiser le code"], c: 0, j: "C'est l'équité dans l'accès aux technologies et le traitement impartial des individus (absence de discrimination)." },
+        { q: "Le biais de 'sélection' dans les données survient quand :", r: ["L'échantillon d'entraînement n'est pas représentatif de la population réelle", "L'algo est mal codé", "Il y a trop de données"], c: 0, j: "Si vous entraînez une IA médicale uniquement sur des hommes, elle échouera sur les femmes. C'est un biais de sélection/représentativité." },
+        { q: "Le RGPD (GDPR) impose principalement :", r: ["Le consentement et la protection des données personnelles", "La gratuité de l'IA", "L'open source"], c: 0, j: "C'est le règlement européen qui encadre strictement la collecte, le traitement et le stockage des données à caractère personnel." },
+        { q: "L'explicabilité (Explainability/XAI) est cruciale pour :", r: ["Détecter les biais et gagner la confiance des utilisateurs", "Accélérer le calcul", "Réduire le coût"], c: 0, j: "Si on ne comprend pas pourquoi une IA refuse un prêt (Boîte noire), on ne peut ni contester la décision ni vérifier l'absence de discrimination." },
+        { q: "Un algorithme 'Neutre' est-il possible techniquement ?", r: ["Difficilement, car les données reflètent les biais historiques de la société", "Oui, les maths sont neutres", "Oui, si on supprime la colonne sexe"], c: 0, j: "La neutralité absolue est un mythe. Les données d'apprentissage contiennent les préjugés du passé. Supprimer une colonne ne suffit pas (variables corrélées/proxy)." },
+        { q: "L'automatisation des métiers par l'IA soulève une question de :", r: ["Responsabilité sociale et transformation du travail", "Performance pure", "Bug informatique"], c: 0, j: "C'est un enjeu sociétal majeur : comment gérer la transition, la formation et la répartition de la valeur créée par l'automatisation." },
+        { q: "La responsabilité juridique en cas d'erreur d'une IA autonome (ex: voiture) est :", r: ["Un sujet complexe encore en débat (Constructeur ? Utilisateur ?)", "Toujours l'utilisateur", "Toujours le développeur"], c: 0, j: "C'est un vide juridique partiel. La responsabilité est souvent partagée ou difficile à attribuer sans législation spécifique (comme le futur AI Act)." },
+
+        // --- GÉNÉRATION DE VARIANTES POUR ATTEINDRE 100+ ---
+        // Je vais ajouter des variantes techniques et des calculs rapides
+        { q: "Si Y = 100 - 0.5X. Pour X = 200, Y vaut :", r: ["0", "100", "50"], c: 0, j: "100 - (0.5 * 200) = 100 - 100 = 0." },
+        { q: "Dans une régression, si R² = 1, alors la MSE est :", r: ["0", "1", "Infinie"], c: 0, j: "R²=1 signifie une prédiction parfaite. Si prédiction parfaite, l'erreur (MSE) est nulle." },
+        { q: "Laquelle de ces bibliothèques n'est PAS dédiée au Machine Learning ?", r: ["Flask", "Scikit-learn", "TensorFlow"], c: 0, j: "Flask est un framework web. Scikit-learn et TensorFlow sont pour le ML." },
+        { q: "Un 'outlier' est défini comme :", r: ["Une valeur extrême qui s'écarte significativement des autres", "Une erreur de syntaxe", "Une valeur manquante"], c: 0, j: "C'est une observation atypique (ex: un âge de 200 ans) qui peut fausser les modèles statistiques." },
+        { q: "L'imputation par la moyenne est risquée si :", r: ["La distribution est asymétrique ou contient des outliers", "Les données sont manquantes au hasard", "Le dataset est grand"], c: 0, j: "La moyenne est attirée par les outliers. Sur une distribution asymétrique, la médiane est une meilleure représentation centrale." },
+        { q: "En régression linéaire simple, la droite passe toujours par :", r: ["Le point moyen (X_barre, Y_barre)", "L'origine (0,0)", "Le dernier point"], c: 0, j: "Propriété mathématique des moindres carrés : la droite de régression passe toujours par le centre de gravité du nuage de points (moyennes)." },
+        { q: "Si la pente est nulle (a=0), la corrélation est :", r: ["Nulle", "1", "-1"], c: 0, j: "Si la droite est horizontale, X n'explique pas Y. La corrélation est 0." },
+        { q: "Une corrélation de 0.8 implique-t-elle une causalité ?", r: ["Non, corrélation n'est pas causalité", "Oui, toujours", "Seulement si positive"], c: 0, j: "C'est la règle d'or. Deux variables peuvent évoluer ensemble par hasard ou à cause d'une 3ème variable cachée (facteur de confusion)." },
+        { q: "Quelle fonction permet de lire un fichier Excel avec Pandas ?", r: ["pd.read_excel()", "pd.read_csv()", "pd.load_xls()"], c: 0, j: "La fonction spécifique est `read_excel`. `read_csv` est pour les fichiers texte délimités." },
+        { q: "Comment supprimer les lignes contenant des valeurs manquantes ?", r: ["df.dropna()", "df.fillna()", "df.delete_nan()"], c: 0, j: "`dropna()` supprime. `fillna()` remplace." },
+        { q: "Si vous avez 1 million de lignes, quel algo est préférable pour une régression ?", r: ["SGDRegressor (Descente de Gradient)", "OLS (Inversion matricielle)", "Calcul à la main"], c: 0, j: "L'inversion matricielle de OLS est coûteuse (cubique). La descente de gradient stochastique (SGD) est beaucoup plus efficace sur les grands datasets." },
+        { q: "Le paramètre `random_state` dans train_test_split sert à :", r: ["Rendre le découpage reproductible", "Améliorer le score", "Accélérer le calcul"], c: 0, j: "Il fixe la graine aléatoire (seed). Cela garantit que si vous relancez le code, vous aurez exactement le même découpage." },
+        { q: "Une variable 'Code Postal' (ex: 75001, 69002) doit être traitée comme :", r: ["Une variable catégorielle (Nominale)", "Une variable numérique continue", "Une variable ordinale"], c: 0, j: "Le code postal est une étiquette géographique. Le fait que 75000 > 69000 n'a pas de sens mathématique (Paris n'est pas 'plus grand' que Lyon). C'est nominal." },
+        { q: "Si votre dataset contient des doublons parfaits, il faut :", r: ["Les supprimer (drop_duplicates)", "Les garder pour donner du poids", "Les multiplier"], c: 0, j: "Les doublons biaisent l'évaluation en apparaissant à la fois dans le train et le test. Il faut les nettoyer." },
+        { q: "Quelle métrique est en pourcentage ?", r: ["MAPE (Mean Absolute Percentage Error)", "MSE", "MAE"], c: 0, j: "La MAPE exprime l'erreur en pourcentage de la valeur réelle, ce qui est très parlant pour le business." },
+        { q: "Laquelle de ces tâches est de l'apprentissage NON supervisé ?", r: ["Clustering (Regroupement)", "Régression", "Classification"], c: 0, j: "En clustering, on n'a pas de labels (pas de Y). On cherche des structures naturelles dans les données." },
+        { q: "Dans une régression Y = aX + b, si X est le temps et Y la température, quelle est l'unité de 'a' ?", r: ["Degrés par unité de temps", "Degrés", "Temps"], c: 0, j: "C'est une vitesse de variation : Variation Y / Variation X = Degrés / Temps." },
+        { q: "Quelle est la dérivée de x² (utile pour la descente de gradient) ?", r: ["2x", "x", "x²"], c: 0, j: "La dérivée de x² est 2x. C'est la base de l'optimisation de la fonction de coût MSE." },
+        { q: "Un modèle 'sous-apprend' (Underfitting) quand :", r: ["Il est trop simple pour capturer la tendance", "Il est trop complexe", "Il a trop de données"], c: 0, j: "Exemple : essayer de prédire une trajectoire parabolique avec une ligne droite. Le modèle n'a pas assez de liberté." },
+        { q: "La régularisation (Lasso/Ridge) sert à :", r: ["Éviter l'overfitting en pénalisant les grands coefficients", "Augmenter la variance", "Supprimer les données"], c: 0, j: "Elle ajoute un terme de pénalité à la fonction de coût pour forcer le modèle à rester simple (coefficients petits)." },
+        { q: "Si X et Y ont une corrélation de 1, alors la MSE d'une régression linéaire sera :", r: ["0 (ou très proche)", "1", "Infinie"], c: 0, j: "Si la corrélation est 1, tous les points sont parfaitement alignés sur une droite. La régression passera par tous les points." },
+        { q: "Dans Pandas, `df['col'].unique()` renvoie :", r: ["Les valeurs uniques de la colonne", "Le nombre de valeurs uniques", "Les doublons"], c: 0, j: "Il renvoie un tableau des valeurs distinctes. Pour le nombre, c'est `nunique()`." },
+        { q: "Quelle commande affiche les dernières lignes ?", r: ["tail()", "head()", "last()"], c: 0, j: "`tail()` (queue) est l'inverse de `head()` (tête)." },
+        { q: "Scikit-learn accepte-t-il les valeurs manquantes (NaN) par défaut ?", r: ["Non, il faut les traiter avant", "Oui, il les ignore", "Oui, il met la moyenne"], c: 0, j: "Non, la plupart des estimateurs sklearn lèveront une erreur si l'entrée contient des NaNs." },
+        { q: "Le 'Biais' (Bias) dans un réseau de neurones ou une régression (b) sert à :", r: ["Décaler la fonction d'activation (ou la droite) par rapport à l'origine", "Multiplier l'entrée", "Rien"], c: 0, j: "Sans biais (intercept), la droite passerait toujours par (0,0), ce qui limiterait sa capacité d'ajustement." },
+        { q: "Si vous prédisez 10 alors que la réalité est 100, l'erreur relative est :", r: ["90%", "9%", "900%"], c: 0, j: "L'écart est 90. 90 par rapport à 100 fait 90%." },
+        { q: "Dans une matrice de confusion, que signifie 'Faux Positif' ?", r: ["Le modèle a prédit OUI à tort", "Le modèle a prédit NON à tort", "Le modèle a prédit OUI correctement"], c: 0, j: "C'est une fausse alarme. La réalité était NON, le modèle a dit OUI." },
+        { q: "En régression, la valeur prédite est-elle discrète ou continue ?", r: ["Continue", "Discrète", "Catégorielle"], c: 0, j: "C'est la définition fondamentale : régression = sortie continue (réel)." },
+        { q: "Quelle librairie est construite au-dessus de Matplotlib pour des graphes statistiques plus beaux ?", r: ["Seaborn", "Pandas", "Numpy"], c: 0, j: "Seaborn simplifie la création de graphiques complexes et est esthétiquement meilleure par défaut." },
+        { q: "Le format de fichier le plus courant pour l'échange de données tabulaires simples est :", r: ["CSV", "JSON", "XML"], c: 0, j: "CSV (Comma Separated Values) est le standard universel pour les tableaux simples." },
+        { q: "Si vous avez 100 colonnes (features) et 50 lignes, vous risquez :", r: ["L'overfitting massif", "L'underfitting", "Une erreur mémoire"], c: 0, j: "Avoir plus de variables que d'observations (p > n) est une situation critique où le modèle peut apprendre 'par cœur' les données." },
+        { q: "La médiane est-elle sensible aux valeurs extrêmes ?", r: ["Non", "Oui", "Autant que la moyenne"], c: 0, j: "C'est son principal atout. La médiane de [1, 2, 1000] est 2. La moyenne serait 334." },
+        { q: "Dans `y_pred = model.predict(X_test)`, que contient `y_pred` ?", r: ["Les prédictions du modèle pour les données de test", "Les vraies valeurs", "Les erreurs"], c: 0, j: "C'est le vecteur des valeurs estimées par le modèle pour les entrées X_test." },
+        { q: "À quoi sert `matplotlib.pyplot.scatter()` ?", r: ["Tracer un nuage de points", "Tracer une ligne", "Tracer un histogramme"], c: 0, j: "Scatter plot = Nuage de points. Essentiel pour visualiser la corrélation entre deux variables continues." },
+        { q: "Quelle est la différence entre IA Faible et IA Forte ?", r: ["IA Faible = Tâche spécifique / IA Forte = Conscience généraliste", "IA Faible = Mauvais calculs", "Il n'y en a pas"], c: 0, j: "L'IA actuelle (même ChatGPT) est 'Faible' ou 'Etroite' (spécialisée). L'IA Forte (AGI) dotée de conscience reste théorique." },
+        { q: "Le 'Turing Test' évalue :", r: ["La capacité d'une machine à imiter la conversation humaine", "La puissance de calcul", "La vision par ordinateur"], c: 0, j: "Proposé par Alan Turing (1950) : si un humain ne peut pas distinguer la machine de l'homme, elle passe le test." },
+        { q: "Pourquoi l'IA a-t-elle explosé après 2010 ?", r: ["Big Data + Puissance de calcul (GPU) + Nouveaux algos (Deep Learning)", "Invention de l'ordinateur", "Découverte de la régression"], c: 0, j: "La convergence de ces trois facteurs a permis l'émergence des réseaux de neurones profonds efficaces." },
+        { q: "En Python, l'indentation (espaces en début de ligne) est :", r: ["Obligatoire pour définir les blocs de code", "Esthétique seulement", "Optionnelle"], c: 0, j: "Contrairement au C ou Java (accolades), Python utilise l'indentation pour la structure syntaxique." },
+        { q: "Dans un DataFrame, l'index correspond à :", r: ["L'étiquette des lignes", "Le nom des colonnes", "Le type de données"], c: 0, j: "C'est l'identifiant de la ligne (par défaut 0, 1, 2...), mais ça peut être une date ou un ID client." },
+        { q: "Si la corrélation est de 0.5, le R² (dans une régression simple) est de :", r: ["0.25", "0.5", "1"], c: 0, j: "Dans une régression simple, R² = r². Donc 0.5² = 0.25." }
+    ];
+
+    let totalPoints = 0;
+    let totalQuestionsAnswered = 0;
+    let shuffledQuestions = [];
+    let currentQuestionIndex = 0;
+
+    // Fonction de mélange
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function initQuiz() {
+        shuffledQuestions = shuffle([...database]);
+        currentQuestionIndex = 0;
+        totalPoints = 0;
+        totalQuestionsAnswered = 0;
+        document.getElementById('score').innerText = `Score : 0 / 0`;
+        genererQuestion();
+    }
+
+    function chargerProchaineQuestion() {
+        currentQuestionIndex++;
+        genererQuestion();
+    }
+
+    function genererQuestion() {
+        if (currentQuestionIndex >= shuffledQuestions.length) {
+            // Fin du quiz
+            document.getElementById('quiz-container').innerHTML = `
+                <div class="card" style="text-align:center;">
+                    <h2 style="color:#ffffff;">🎉 Examen Terminé !</h2>
+                    <p style="font-size:1.5rem; margin:20px 0; color:#b0b0b0;">Score final : <strong style="color:var(--primary-color)">${totalPoints} / ${database.length}</strong></p>
+                    <button class="nav-btn" onclick="location.reload()">Recommencer</button>
+                </div>
+            `;
+            document.getElementById('next-btn').style.display = 'none';
+            return;
+        }
+
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn) nextBtn.style.display = 'none';
+
+        const q = shuffledQuestions[currentQuestionIndex];
+        
+        // Mélange des réponses
+        let answers = q.r.map((text, index) => ({ text, index }));
+        shuffle(answers);
+        
+        let html = `
+            <div class="card">
+                <div class="question-title">${q.q}</div>
+                <div class="options-grid">
+                    ${answers.map(ans => `
+                        <button class="option-btn" onclick="verifier(${ans.index}, ${q.c}, '${q.j.replace(/'/g, "\\'")}', this)">
+                            ${ans.text}
+                        </button>
+                    `).join('')}
+                </div>
+                <div id="res-box" class="justification"></div>
+            </div>
+        `;
+        document.getElementById('quiz-container').innerHTML = html;
+    }
+
+    function verifier(selected, correct, justification, btnClicked) {
+        totalQuestionsAnswered++;
+        const buttons = document.querySelectorAll('.option-btn');
+        const resBox = document.getElementById('res-box');
+        
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (selected === correct) {
+            totalPoints++;
+            btnClicked.classList.add('correct');
+            resBox.innerHTML = `<strong>✅ Bravo !</strong><br>${justification}`;
+        } else {
+            btnClicked.classList.add('wrong');
+            resBox.innerHTML = `<strong>❌ Mauvaise réponse.</strong><br>${justification}`;
+        }
+
+        resBox.style.display = 'block';
+        document.getElementById('score').innerText = `Score : ${totalPoints} / ${totalQuestionsAnswered}`;
+        document.getElementById('next-btn').style.display = 'block';
+    }
+
+    initQuiz();
+</script>
+
+</body>
+</html>
